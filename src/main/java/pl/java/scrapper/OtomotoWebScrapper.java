@@ -17,7 +17,6 @@ public class OtomotoWebScrapper {
     private final String url;
     private final Set<String> setOfUrls;
 
-
     public OtomotoWebScrapper(String url) {
         this.url = url;
         setOfUrls = new HashSet<>();
@@ -39,8 +38,7 @@ public class OtomotoWebScrapper {
             System.err.println("There was a client side error.");
             System.err.println("Status code: " + statusCode);
             return false;
-        }
-        else if (statusCode >=500 && statusCode <= 599) {
+        } else if (statusCode >=500 && statusCode <= 599) {
             System.err.println("There was a server side error.");
             System.err.println("Status code: " + statusCode);
             return false;
@@ -78,8 +76,8 @@ public class OtomotoWebScrapper {
         Document doc = Jsoup.connect(urlToCheck).get();
         Elements select = doc.select("span.page");
 
-        if (select.last() == null) {
-            return 0;
+        if (select.last() == null) { // if its null that means there is only one page
+            return 2;               // so return 2 as maxPages < 2 so the for loop will iterate only once
         }
 
         return Integer.parseInt(select.last().text());
