@@ -1,2 +1,2 @@
 *.html
-links/page/*.html
+links\page\*.html
