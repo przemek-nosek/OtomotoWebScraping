@@ -1,5 +1,6 @@
 package pl.java.scrapper;
 
+import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -10,26 +11,20 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.atomic.LongAdder;
+
 
 public class OtomotoWebScrapper {
     private final String url;
     private final Set<String> setOfUrls;
-    //    private static LongAdder counter = new LongAdder();
-    private int page;
 
 
-    public OtomotoWebScrapper(String url, int page) {
-//        counter.add(1);
+    public OtomotoWebScrapper(String url) {
         this.url = url;
-        this.page = page;
         setOfUrls = new HashSet<>();
     }
 
     public void getLinksFromPage() throws IOException {
         Document doc = Jsoup.connect(url).get();
-
-
         for (Element element : doc.select("a.offer-title__link")) {
             String href = element.attr("href");
             if (!href.contains("otomoto.pl")) {
@@ -39,30 +34,54 @@ public class OtomotoWebScrapper {
         }
     }
 
+    private boolean checkConnection(int statusCode) {
+        if (statusCode >=400 && statusCode <= 499) {
+            System.err.println("There was a client side error.");
+            System.err.println("Status code: " + statusCode);
+            return false;
+        }
+        else if (statusCode >=500 && statusCode <= 599) {
+            System.err.println("There was a server side error.");
+            System.err.println("Status code: " + statusCode);
+            return false;
+        }
+        return true;
+    }
+
     public void savePageContentToFile() throws IOException {
         for (String url : setOfUrls) {
-            var doc = Jsoup.connect(url).get();
-            System.out.println("Saving... " + doc.title());
+            Connection con = Jsoup.connect(url).ignoreHttpErrors(true);
+            Document doc = con.get();
+            int statusCode = con.response().statusCode();
 
-            if (!Files.exists(Path.of("links\\" + "page" + page))) {
-                Files.createDirectory(Path.of("links\\" + "page" + page));
+            if (!checkConnection(statusCode)) {
+                continue;
             }
-            Files.writeString(Path.of("links\\" + "page" + page + "\\" + doc.title() + ".html"), doc.outerHtml());
+
+            if (!Files.exists(Path.of("links\\" + "page"))) {
+                Files.createDirectory(Path.of("links\\" + "page"));
+            }
+
+            Path path = Path.of("links\\"+"page"+"\\"+doc.title()+".html");
+            if (Files.exists(path)) {
+                System.out.println("Duplicated entry");
+                continue;
+            }
+
+            System.out.println("Saving... " + doc.title());
+            Files.writeString(path, doc.outerHtml());
         }
     }
 
-    public int getMaxPages() throws IOException {
-        Document doc = Jsoup.connect(url).get();
+
+    public static int getMaxPages(String urlToCheck) throws IOException {
+        Document doc = Jsoup.connect(urlToCheck).get();
         Elements select = doc.select("span.page");
 
-        int amount = Integer.parseInt(select.last().text());
-        System.out.println(select.last().text());
+        if (select.last() == null) {
+            return 0;
+        }
 
-        return amount;
+        return Integer.parseInt(select.last().text());
     }
-
-//    public static LongAdder getCounter() {
-//        return counter;
-//    }
-
 }

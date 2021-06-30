@@ -1,36 +1,28 @@
 package pl.java.scrapper;
 
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
-
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-
-
 public class Main {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         final String url =
                 "https://www.otomoto.pl/osobowe/?search%5Bfilter_float_price%3Afrom%5D=500000&search%5Bfilter_float_price%3Ato%5D=1000000";
 
         var executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
-        AtomicInteger atomicInteger = new AtomicInteger(0);
-        for (int i = 0; i < 8; i++) {
+        int maxPages = OtomotoWebScrapper.getMaxPages(url);
+
+        if (maxPages > 10) { // Can read max 10 pages total.
+            maxPages = 11;
+        }
+
+        AtomicInteger atomicInteger = new AtomicInteger(1);
+        for (int i = 1; i < maxPages; i++) {
             executor.execute(() -> {
                 try {
-                    var scrapper = new OtomotoWebScrapper(url+"&page="+ atomicInteger.incrementAndGet(), atomicInteger.get());
-                    scrapper.getMaxPages();
+                    var scrapper = new OtomotoWebScrapper(url+"&page="+ atomicInteger.getAndIncrement());
                     scrapper.getLinksFromPage();
                     scrapper.savePageContentToFile();
                 } catch (IOException e) {
@@ -38,7 +30,6 @@ public class Main {
                 }
             });
         }
-
 
         try {
             executor.shutdown();
